@@ -6,12 +6,11 @@ The task: given a biomedical research question and the abstract that addresses i
 
 The project covers the full loop: data preparation → training → evaluation against a quarantined test set → a calibration experiment → a CLI inference interface.
 
+**For a detailed walkthrough of every stage, hyperparameter and metric, see [PIPELINE.md](PIPELINE.md).**
+
 ---
 
 ## Results
-![Results](docs/results_summary.png)
-![Confusion matrices](docs/confusion_matrices.png)
-![Calibration sweep](docs/calibration_curve.png)
 
 Evaluated on the **official 500-item PubMedQA expert test split**, never seen during training.
 
@@ -23,6 +22,8 @@ Evaluated on the **official 500-item PubMedQA expert test split**, never seen du
 | QLoRA fine-tuned (calibrated, τ=0.06) | 62.8% | **0.5619** | 0.280 |
 
 **Headline: 71.2% accuracy vs. a 55.2% majority-class baseline — +16 points.**
+
+![Results summary](docs/results_summary.png)
 
 Two numbers in that table need context, and both are discussed below: the base model's 26.4% is an artifact of the scoring method and should be read as a floor rather than a fair zero-shot estimate; and the calibrated row is a **tradeoff**, not a strict improvement.
 
@@ -41,6 +42,8 @@ Confusion matrix (rows = true, cols = predicted)
   no           29   140      0
   maybe        34    21      0
 ```
+
+![Confusion matrices](docs/confusion_matrices.png)
 
 The `maybe` column is entirely zero. That failure is the most interesting part of this project and is analysed in [Findings](#findings).
 
@@ -203,6 +206,10 @@ Confusion matrix, calibrated (rows = true, cols = predicted)
   maybe        19     9     27
 ```
 
+![Calibration sweep](docs/calibration_curve.png)
+
+The validation curve is nearly flat above τ = 0.24, which is why the chosen threshold is described below as weakly identified rather than optimal.
+
 **This is a tradeoff, not an improvement.** Neither configuration dominates: argmax wins on overall correctness, calibration wins on balanced per-class performance. Which to prefer depends on whether the downstream application cares about aggregate accuracy or about not silently dropping an entire category. The finding is the tradeoff curve, not the threshold value.
 
 ---
@@ -229,13 +236,15 @@ pubmedqa-lora/
 │   ├── evaluate.py       base vs tuned, cached predictions
 │   ├── calibrate.py      threshold sweep experiment
 │   ├── infer.py          CLI demo + interactive mode
-│   └── export.py         merge adapter → Ollama Modelfile (optional)
+│   └── make_figures.py   regenerate the figures in docs/
+├── results/              eval_results.json, calibration.json  (committed)
+├── docs/                 generated figures
 ├── data/                 generated JSONL (gitignored)
-├── outputs/              adapter, metrics, cached predictions (gitignored)
+├── outputs/              adapter and cached predictions (gitignored)
+├── PIPELINE.md           detailed walkthrough of every stage and term
 └── requirements.txt
 ```
 
-> `export.py` merges the LoRA adapter into fp16 base weights and emits an Ollama `Modelfile`. GGUF conversion via `llama.cpp` is documented but has not been validated on this setup.
 
 ---
 
@@ -258,6 +267,8 @@ Every result above comes from a fixed seed (42) set in `config.py`. Running `dat
 
 - `eval_results.json` — accuracy, macro F1, per-class report, confusion matrices
 - `calibration.json` — full τ sweep and the chosen value
+
+The first two are committed under `results/`, so every number in this README can be checked without running anything. Figures are regenerated from them with `python -m src.make_figures`.
 - `preds_*.json`, `probs_*.json` — cached predictions and probability distributions
 
 ---
@@ -266,11 +277,6 @@ Every result above comes from a fixed seed (42) set in `config.py`. Running `dat
 
 Dataset: [PubMedQA](https://github.com/pubmedqa/pubmedqa) (Jin et al., 2019), MIT licensed.
 Base model: [Qwen2.5-3B-Instruct](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct).
-
-
- testing - run python -m src.infer --demo 8 in terminal to get a overview of our model.
- 
-
 
 ## License
 
