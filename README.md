@@ -6,8 +6,6 @@ The task: given a biomedical research question and the abstract that addresses i
 
 The project covers the full loop: data preparation → training → evaluation against a quarantined test set → a calibration experiment → a CLI inference interface.
 
-**For a detailed walkthrough of every stage, hyperparameter and metric, see [PIPELINE.md](PIPELINE.md).**
-
 ---
 
 ## Results
